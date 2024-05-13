@@ -1,0 +1,59 @@
+"@AUTHOR: PATRICIA AREVALO"
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate synthetic data
+np.random.seed(42)
+X = np.linspace(0, 10, 50)
+true_slope = 2
+true_intercept = 5
+true_noise = 2
+y = true_slope * X + true_intercept + np.random.normal(scale=true_noise, size=len(X))
+
+# Prior parameters
+prior_mean = np.array([0, 0])  # mean of the prior distribution for slope and intercept
+prior_cov = np.array([[1, 0], [0, 1]])  # covariance matrix of the prior distribution
+
+# Bayesian updating
+def bayesian_update(X, y, prior_mean, prior_cov, noise_variance):
+    # Design matrix
+    X_design = np.vstack([np.ones_like(X), X]).T
+    # Posterior covariance
+    posterior_cov = np.linalg.inv(np.linalg.inv(prior_cov) + (1 / noise_variance) * np.dot(X_design.T, X_design))
+    # Posterior mean
+    posterior_mean = np.dot(posterior_cov, np.dot(np.linalg.inv(prior_cov), prior_mean) + (1 / noise_variance) * np.dot(X_design.T, y))
+    return posterior_mean, posterior_cov
+
+# Noise variance (assumed known)
+noise_variance = true_noise ** 2
+
+# Update the prior using the observed data
+posterior_mean, posterior_cov = bayesian_update(X, y, prior_mean, prior_cov, noise_variance)
+
+# Predictive distribution
+def predictive_distribution(X_test, posterior_mean, posterior_cov, noise_variance):
+    X_design_test = np.vstack([np.ones_like(X_test), X_test]).T
+    # Predictive mean
+    predictive_mean = np.dot(X_design_test, posterior_mean)
+    # Predictive variance
+    predictive_var = noise_variance + np.sum(np.dot(X_design_test, posterior_cov) * X_design_test, axis=1)
+    return predictive_mean, predictive_var
+
+# Generate test points for prediction
+X_test = np.linspace(0, 10, 100)
+
+# Calculate predictive mean and variance
+pred_mean, pred_var = predictive_distribution(X_test, posterior_mean, posterior_cov, noise_variance)
+
+# Plot the data and the predictive distribution
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, color='blue', label='Observations')
+plt.plot(X_test, pred_mean, color='red', label='Predictive Mean')
+plt.fill_between(X_test, pred_mean - 2 * np.sqrt(pred_var), pred_mean + 2 * np.sqrt(pred_var),
+                 color='orange', alpha=0.3, label='Predictive 95% Confidence Interval')
+plt.xlabel('X')
+plt.ylabel('y')
+plt.title('Bayesian Linear Regression')
+plt.legend()
+plt.grid(True)
+plt.show()
